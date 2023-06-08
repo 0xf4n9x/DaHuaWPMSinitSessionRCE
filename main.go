@@ -219,7 +219,7 @@ func exploit(url string, proxyURL string, fileName string) bool {
 		Post(baseURL + "/WPMS/login")
 
 	if lResp.StatusCode() == 200 && strings.Contains(string(lResp.Body()), `success":"true`) {
-		gologger.Print().Label("INFO").Msg("登录成功，用户名/密码: " + username + "/" + password)
+		gologger.Print().Label("INFO").Msg("Username/Password: " + username + "/" + password)
 	}
 
 	var lData map[string]interface{}

