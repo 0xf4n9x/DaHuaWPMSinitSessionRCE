@@ -17,13 +17,18 @@ builds:
     goarch:
       - amd64
       - arm64
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    replacements:
+    files:
+      - none*
+    format_overrides:
+      - goos: windows
+        format: zip
 checksum:
   name_template: 'checksums.txt'
 snapshot:
   name_template: "{{ .Tag }}-next"
-archives:
-  - files:
-      - none*
 changelog:
   sort: asc
   filters:
