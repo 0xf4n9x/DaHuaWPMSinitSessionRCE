@@ -1,12 +1,12 @@
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
 # https://goreleaser.com/customization/build/
-project_name: '{{ .ProjectName }}'
+project_name: "{{ .ProjectName }}"
 gomod:
   proxy: false
 builds:
   - env: [CGO_ENABLED=0]
-    binary: '{{ .ProjectName }}'
+    binary: "{{ .ProjectName }}"
     main: ./
     ldflags:
       - -s -w -X main.Version={{.Version}}
@@ -16,7 +16,6 @@ builds:
       - darwin
     goarch:
       - amd64
-      - 386
       - arm64
 checksum:
   name_template: 'checksums.txt'
@@ -31,3 +30,8 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+      - '\.'
+      - 'README.md'
+      - 'Initial commit'
+      - 'Update '
+      - 'Delete '
