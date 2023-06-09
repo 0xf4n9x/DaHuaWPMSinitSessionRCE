@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	mrand "math/rand"
 	neturl "net/url"
 	"os"
@@ -286,7 +285,7 @@ func genEvilZip(file string) (string, []byte) {
 	f, _ := writer.Create(evilpath)
 
 	var content []byte
-	content, _ = ioutil.ReadFile(filepath.Clean(file))
+	content, _ = os.ReadFile(filepath.Clean(file))
 
 	f.Write(content)
 	_ = writer.Close()
