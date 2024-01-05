@@ -13,6 +13,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -131,6 +132,7 @@ func main() {
 
 func exploit(url string, proxyURL string, fileName string) bool {
 	client := resty.New()
+	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	client.SetTimeout(time.Duration(timeout) * time.Second)
 
 	if proxyURL != "" {
